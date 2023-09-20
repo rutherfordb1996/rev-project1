@@ -49,8 +49,28 @@ function registerNewUser(username,pass,admin){
         }
       });      
 }
+function createTicket( ID, amount, description){
+  var params = {
+    TableName: 'project1_tickets',
+    Item: {
+      'ticket_id' : {S: ID},
+      'amount' : {N: amount},
+      'description' : {S: description},
+      'status' : {S: 'pending'}
+    }
+  };
+  dynamoDB.putItem(params, (err, data) =>{
+    if (err) {
+      console.log("Error", err);
+    } else {
+      console.log("Success", data);
+    }
+    });
+};
 module.exports = {
     registerNewUser,
     checkExistingUsers,
-    loginToAccount
+    loginToAccount,
+    createTicket
 }
+//createTicket("1",'1234',"testing ticketing system")

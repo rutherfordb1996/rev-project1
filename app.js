@@ -10,6 +10,32 @@ const bodyParser = require('body-parser');
 
 server.use(bodyParser.json());
 
+function validateNewTicket(req, res, next){
+  if(!req.body.amount){
+      req.body.valid = false;
+      req.body.reason = "you must include an amount"
+      next();
+  }
+  if(!req.body.description){
+    req.body.valid = false;
+    req.body.reason = "you must include a description"
+    next();
+}
+  else{
+      req.body.valid = true;
+      next();
+  }
+}
+server.post('/tickets',validateNewTicket, (req, res) => {
+  const body = req.body;
+  if(req.body.valid){
+    dao.createTicket(uuid.v4(),body.amount,body.description);
+    res.send("Ticket submitted!");
+    }
+  else{
+    res.send(body.reason);
+  }
+})
 function validateNewAccount(req, res, next){
   if(!req.body.username || !req.body.password || !req.body.admin){
       req.body.valid = false;
