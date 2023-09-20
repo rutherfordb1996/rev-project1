@@ -49,6 +49,28 @@ function registerNewUser(username,pass,admin){
         }
       });      
 }
+
+
+
+
+
+// ticketing functions
+function retrieveTicketsByStatus(status){
+  const params = {
+      TableName: 'project1_tickets',
+      FilterExpression: '#s = :value',
+      ExpressionAttributeNames: {
+          '#s': 'status'
+      },
+      ExpressionAttributeValues: {
+          ':value': status
+      }
+  };
+
+  return dynamoDocClient.scan(params).promise();
+}
+
+
 function createTicket( ID, amount, description){
   var params = {
     TableName: 'project1_tickets',
@@ -56,7 +78,8 @@ function createTicket( ID, amount, description){
       'ticket_id' : {S: ID},
       'amount' : {N: amount},
       'description' : {S: description},
-      'status' : {S: 'pending'}
+      'status' : {S: 'pending'},
+      'resolver' : {S: ' '}
     }
   };
   dynamoDB.putItem(params, (err, data) =>{
@@ -67,10 +90,48 @@ function createTicket( ID, amount, description){
     }
     });
 };
+function updateTicketByID(ticket_id, status, resolver){
+  const params = {
+      TableName: 'project1_tickets',
+      Key: {
+          ticket_id
+      },
+      UpdateExpression: 'set #s = :value, #r = :res',
+      ExpressionAttributeNames:{
+          '#s': 'status',
+          '#r': 'resolver'
+      },
+      ExpressionAttributeValues:{
+          ':value': status,
+          ':res' : resolver
+      }
+  }
+
+  return dynamoDocClient.update(params).promise();
+}
+function isTicketPending(ticket_id){
+  var params = {
+      KeyConditionExpression: '#i = :i',
+      TableName: 'project1_tickets',
+      ExpressionAttributeValues: { ":i": ticket_id},
+      ExpressionAttributeNames: { "#i": 'ticket_id'},
+  }
+  return(dynamoDocClient.query(params).promise());
+}
+
+
+
+
+
+
+
 module.exports = {
     registerNewUser,
     checkExistingUsers,
     loginToAccount,
-    createTicket
+    createTicket,
+    retrieveTicketsByStatus,
+    updateTicketByID,
+    isTicketPending
 }
 //createTicket("1",'1234',"testing ticketing system")

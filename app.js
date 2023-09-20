@@ -10,6 +10,8 @@ const bodyParser = require('body-parser');
 
 server.use(bodyParser.json());
 
+let localStorage = [];
+
 function validateNewTicket(req, res, next){
   if(!req.body.amount){
       req.body.valid = false;
@@ -26,6 +28,59 @@ function validateNewTicket(req, res, next){
       next();
   }
 }
+function validatePermission(req, res, next){
+  if(req.body.role === 'admin' && req.body.username){
+      req.body.valid = true;
+      next();
+  }
+  else{
+      req.body.valid = false;
+      next();
+  }
+}
+server.patch('/tickets',validatePermission, (req,res) => {
+  const id = req.query.ticketID;
+  const stat = req.body.status;
+  if (req.body.valid){
+    dao.isTicketPending(id)
+    .then((data) => {
+      if(data.Items[0].status === 'pending'){
+        dao.updateTicketByID(id,stat,req.body.username)
+          .then((data) =>{
+            res.send(`ticket ${id} has been set to ${stat}`);
+          })
+          .catch((err) => {
+            res.send(err);
+          })
+      }
+      else{
+        res.send("cannot change a resolved ticket")
+      }
+    })
+    .catch((err) => {
+      res.send(err);
+    })
+  }
+  else{
+    res.send("you do not have permission to do this")
+  }
+})
+server.get('/tickets',validatePermission, (req,res) =>{
+  const body = req.body;
+  if(req.body.valid){
+    dao.retrieveTicketsByStatus(req.query.status)
+      .then((data) => {
+        localStorage = data.Items;
+        res.send(localStorage);
+      })
+      .catch((err) => {
+        res.send(err);
+      })
+  }
+  else{
+    res.send("this feature has not yet been implemented");
+  }
+})
 server.post('/tickets',validateNewTicket, (req, res) => {
   const body = req.body;
   if(req.body.valid){
