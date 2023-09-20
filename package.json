@@ -1,0 +1,22 @@
+{
+  "name": "ticketing-project",
+  "version": "1.0.0",
+  "description": "The checklist below is the evaluation standards\r You will utilize this list during the project presentation to demonstrate that your application meets the MVP requirements\r Using Postman or Swagger UI, make sure your API can validate the following functionality:\r Checklist\r Delete\r 0%\r Can register a new account with username and password\r Can use a username and password to log in\r Will notify the user if the username is unavailable\r Can submit new reimbursement tickets\r Will make sure the reimbursement ticket author provides a description and amount during submission\r Pending tickets are in a queue/list that can be seen by Managers\r Tickets can be processed (approved or denied) by Managers.\r Employees can see a list of their previous submissions",
+  "main": "app.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Duncan Stewart",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1460.0",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "find-config": "^1.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
