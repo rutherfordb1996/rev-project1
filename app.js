@@ -34,7 +34,7 @@ function isUsernameValid(username){
   return(res); 
 }
 function validateNewAccount(req, res, next){
-  if(!req.body.username.trim() || !req.body.password.trim() || !req.body.role.trim()){
+  if(!req.body.username.trim() || !req.body.password.trim()){
       req.body.valid = false;
       next();
   }else{
@@ -146,7 +146,6 @@ server.get('/tickets',validatePermission, (req,res) =>{
         })
       }
       else{
-        console.log(body.payload.username,body.payload.role);
         dao.retrieveTicketsByUser(body.payload.username)
         .then((data) => {
          res.send(data.Items);
@@ -190,12 +189,26 @@ server.post('/tickets',validateNewTicket,validatePermission, (req, res) => {
 
 
 // Users endpoints
+server.patch('/users/setrole',validatePermission, (req,res) => {
+  if(req.body.payload.role === 'admin'){
+    dao.updateUserByUsername(req.query.username,req.query.role)
+    .then((data) => {
+      res.send("role updated!");
+    })
+    .catch((err) => {
+      res.send(err);
+    })
+  }
+  else{
+    res.send("you do not have permission to do this")
+  }
+})
 server.post('/users',validateNewAccount, (req, res) => {
   const body = req.body;
   if(req.body.valid){
     isUsernameValid(body.username)
     .then((message) => {
-      dao.registerNewUser(body.username,body.password,body.role);
+      dao.registerNewUser(body.username,body.password);
       res.send(message+"\n\nAccount created!");
     })
     .catch((message) => {
@@ -212,7 +225,6 @@ server.post('/users/login', (req,res) => {
   dao.loginToAccount(body.username,body.password)
   .then((data) => {
     if(data.Count){
-      console.log(data.Items)
       const token = jwtUtil.createJWT(body.username, data.Items[0].role);
       res.setHeader("Content-Type", "application/json") ;
       res.setHeader("User-logged-in", body.username);

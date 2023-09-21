@@ -32,13 +32,13 @@ function loginToAccount(username,password){
 }
 
 //code to persist new user to the database 
-function registerNewUser(username,pass,admin){
+function registerNewUser(username,pass){
     var params = {
         TableName: 'project1_users',
         Item: {
           'username' : {S: username},
           'password' : {S: pass},
-          'role' : {S: admin}
+          'role' : {S: 'employee'}
         }
     };
     dynamoDB.putItem(params, (err, data) =>{
@@ -48,6 +48,23 @@ function registerNewUser(username,pass,admin){
           console.log("Success", data);
         }
       });      
+}
+function updateUserByUsername(username, role){
+  const params = {
+      TableName: 'project1_users',
+      Key: {
+          username
+      },
+      UpdateExpression: 'set #r = :value',
+      ExpressionAttributeNames:{
+          '#r': 'role'
+      },
+      ExpressionAttributeValues:{
+          ':value': role
+      }
+  }
+
+  return dynamoDocClient.update(params).promise();
 }
 
 
@@ -159,7 +176,6 @@ function isTicketPending(ticket_id){
 
 
 
-
 module.exports = {
     registerNewUser,
     checkExistingUsers,
@@ -170,5 +186,6 @@ module.exports = {
     isTicketPending,
     retrieveAllTickets,
     retrieveTicketsByUser,
-    retrieveTicketsByUserAndType
+    retrieveTicketsByUserAndType,
+    updateUserByUsername
 }
