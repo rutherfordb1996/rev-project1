@@ -1,4 +1,5 @@
 const dao = require('./DAO');
+const jwtUtil = require('./utils/jwt_util')
 
 const express = require('express');
 const server = express();
@@ -33,7 +34,7 @@ function isUsernameValid(username){
   return(res); 
 }
 function validateNewAccount(req, res, next){
-  if(!req.body.username || !req.body.password || !req.body.admin){
+  if(!req.body.username.trim() || !req.body.password.trim() || !req.body.role.trim()){
       req.body.valid = false;
       next();
   }else{
@@ -42,36 +43,40 @@ function validateNewAccount(req, res, next){
   }
 }
 function validateNewTicket(req, res, next){
-  if(!req.body.amount){
+  if(!req.body.amount.trim()){
       req.body.valid = false;
       req.body.reason = "you must include an amount"
       next();
   }
-  if(!req.body.description){
+  if(!req.body.description.trim()){
     req.body.valid = false;
     req.body.reason = "you must include a description"
     next();
 }
-  if(!req.body.username){
-    req.body.valid = false;
-    req.body.reason = "you must include your username"
-    next();
-  }
   else{
       req.body.valid = true;
       next();
   }
 }
 function validatePermission(req, res, next){
-  if(req.body.role === 'admin' && req.body.username){
-      req.body.valid = true;
+  if(req.headers.authorization){
+    const token = req.headers.authorization.split(' ')[1]
+    jwtUtil.verifyTokenAndReturnPayload(token)
+    .then((payload) => {
+      req.body.payload = payload;
       next();
+    })
+    .catch((err) => {
+      req.body.err = err;
+      next();
+    })
   }
   else{
-      req.body.valid = false;
-      next();
-  }
+    next();
+  } 
 }
+  
+  
 
 
 
@@ -80,11 +85,11 @@ function validatePermission(req, res, next){
 server.patch('/tickets',validatePermission, (req,res) => {
   const id = req.query.ticketID;
   const stat = req.body.status;
-  if (req.body.valid){
+  if (req.body.payload.role === 'admin'){
     dao.isTicketPending(id)
     .then((data) => {
       if(data.Items[0].status === 'pending'){
-        dao.updateTicketByID(id,stat,req.body.username)
+        dao.updateTicketByID(id,stat,req.body.payload.username)
           .then((data) =>{
             res.send(`ticket ${id} has been set to ${stat}`);
           })
@@ -107,47 +112,75 @@ server.patch('/tickets',validatePermission, (req,res) => {
 
 server.get('/tickets',validatePermission, (req,res) =>{
   const body = req.body;
-  if(req.body.valid){
-    if(req.query.status){
-      dao.retrieveTicketsByStatus(req.query.status)
-      .then((data) => {
-        localStorage = data.Items;
-        res.send(localStorage);
-      })
-      .catch((err) => {
-        res.send(err);
-      })
+  if(body.payload){
+    if(body.payload.role === 'admin'){
+      if(req.query.status){
+        dao.retrieveTicketsByStatus(req.query.status)
+        .then((data) => {
+          localStorage = data.Items;
+          res.send(localStorage);
+        })
+        .catch((err) => {
+          res.send(err);
+        })
+      }
+      else{
+          dao.retrieveAllTickets()
+            .then((data) => {
+              localStorage = data.Items;
+              res.send(localStorage);
+            })
+            .catch((err) => {
+              res.send(err);
+            })
+      }
     }
-    else{
-        dao.retrieveAllTickets()
-          .then((data) => {
-            localStorage = data.Items;
-            res.send(localStorage);
-          })
-          .catch((err) => {
-            res.send(err);
-          })
+    else if(body.payload.role === 'employee'){
+      if(req.query.type){
+        dao.retrieveTicketsByUserAndType(body.payload.username,req.query.type)
+        .then((data) => {
+          res.send(data.Items);
+        })
+        .catch((err) => {
+          res.send(err);
+        })
+      }
+      else{
+        console.log(body.payload.username,body.payload.role);
+        dao.retrieveTicketsByUser(body.payload.username)
+        .then((data) => {
+         res.send(data.Items);
+        })
+        .catch((err) => {
+         res.send(err);
+        })
+      }
     }
   }
   else{
-    dao.retrieveTicketsByUser(body.username)
-    .then((data) => {
-      res.send(data.Items);
-    })
-    .catch((err) => {
-      res.send(err);
-    })
+    res.send("you must log in to do this")
   }
 })
 
-server.post('/tickets',validateNewTicket, (req, res) => {
+server.post('/tickets',validateNewTicket,validatePermission, (req, res) => {
   const body = req.body;
-  if(req.body.valid){
-    dao.createTicket(uuid.v4(),body.amount,body.description, body.username);
-    res.send("Ticket submitted!");
+  if(req.body.payload){
+    if(req.body.valid){
+      if(req.body.type){
+        dao.createTicket(uuid.v4(),body.amount,body.description, body.payload.username, type=body.type);
+      }
+      else{
+        dao.createTicket(uuid.v4(),body.amount,body.description, body.payload.username);
+      }
+      
+      res.send("Ticket submitted!");
+      }
+    else{
+      res.send(body.reason);
     }
+  }
   else{
-    res.send(body.reason);
+    res.send("you must be logged in to post a ticket");
   }
 })
 
@@ -162,7 +195,7 @@ server.post('/users',validateNewAccount, (req, res) => {
   if(req.body.valid){
     isUsernameValid(body.username)
     .then((message) => {
-      dao.registerNewUser(body.username,body.password,body.admin);
+      dao.registerNewUser(body.username,body.password,body.role);
       res.send(message+"\n\nAccount created!");
     })
     .catch((message) => {
@@ -179,9 +212,14 @@ server.post('/users/login', (req,res) => {
   dao.loginToAccount(body.username,body.password)
   .then((data) => {
     if(data.Count){
+      console.log(data.Items)
+      const token = jwtUtil.createJWT(body.username, data.Items[0].role);
       res.setHeader("Content-Type", "application/json") ;
       res.setHeader("User-logged-in", body.username);
-      res.send("user logged in successfully").status(200);
+      res.send({
+        message: "login successful",
+        token : token
+      }).status(200);
     }
     else{
       res.send("Invalid credentials");

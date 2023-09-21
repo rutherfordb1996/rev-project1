@@ -80,6 +80,21 @@ function retrieveTicketsByUser(username){
           ':value': username
       }
   };
+  return dynamoDocClient.scan(params).promise();
+}
+  function retrieveTicketsByUserAndType(username,type){
+    const params = {
+        TableName: 'project1_tickets',
+        FilterExpression: '#u = :value and #t = :t',
+        ExpressionAttributeNames: {
+            '#u': 'submitted_by',
+            "#t": 'type'
+        },
+        ExpressionAttributeValues: {
+            ':value': username,
+            ':t': type
+        }
+    };
 
   return dynamoDocClient.scan(params).promise();
 }
@@ -92,7 +107,7 @@ function retrieveAllTickets(){
 }
 
 
-function createTicket( ID, amount, description, user){
+function createTicket( ID, amount, description, user, type = "default"){
   var params = {
     TableName: 'project1_tickets',
     Item: {
@@ -101,7 +116,8 @@ function createTicket( ID, amount, description, user){
       'description' : {S: description},
       'status' : {S: 'pending'},
       'submitted_by': {S: user},
-      'resolver' : {S: ' '}
+      'resolver' : {S: ' '},
+      'type' : {S: type}
     }
   };
   dynamoDB.putItem(params, (err, data) =>{
@@ -144,9 +160,6 @@ function isTicketPending(ticket_id){
 
 
 
-
-
-
 module.exports = {
     registerNewUser,
     checkExistingUsers,
@@ -156,6 +169,6 @@ module.exports = {
     updateTicketByID,
     isTicketPending,
     retrieveAllTickets,
-    retrieveTicketsByUser
+    retrieveTicketsByUser,
+    retrieveTicketsByUserAndType
 }
-//createTicket("1",'1234',"testing ticketing system")
