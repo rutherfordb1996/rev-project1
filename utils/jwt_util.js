@@ -6,7 +6,7 @@ function createJWT(username, role){
     return jwt.sign({
         username,
         role
-    }, 'Placeholder_secret123', {
+    }, process.env.jwt_secret_key, {
         expiresIn: '1d'
     })
 }
