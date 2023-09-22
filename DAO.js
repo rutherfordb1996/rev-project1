@@ -6,7 +6,8 @@ AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID_1,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY_1
 });
-
+const usersTable = "project1_users"
+const ticketsTable = "project1_tickets"
 const dynamoDB = new AWS.DynamoDB();
 const dynamoDocClient = new AWS.DynamoDB.DocumentClient();
 
@@ -14,7 +15,7 @@ const dynamoDocClient = new AWS.DynamoDB.DocumentClient();
 function checkExistingUsers(username){
     var params = {
        KeyConditionExpression: 'username = :n',
-       TableName: 'project1_users',
+       TableName: usersTable,
        ExpressionAttributeValues: { ":n": username },
       };
       
@@ -24,7 +25,7 @@ function loginToAccount(username,password){
     var params = {
         KeyConditionExpression: '#u = :n',
         FilterExpression: '#p = :p',
-        TableName: 'project1_users',
+        TableName: usersTable,
         ExpressionAttributeValues: { ":n": username, ":p": password},
         ExpressionAttributeNames: { "#u": 'username', '#p': 'password'},
     }
@@ -34,7 +35,7 @@ function loginToAccount(username,password){
 //code to persist new user to the database 
 function registerNewUser(username,pass){
     var params = {
-        TableName: 'project1_users',
+        TableName: usersTable,
         Item: {
           'username' : {S: username},
           'password' : {S: pass},
@@ -51,7 +52,7 @@ function registerNewUser(username,pass){
 }
 function updateUserByUsername(username, role){
   const params = {
-      TableName: 'project1_users',
+      TableName: usersTable,
       Key: {
           username
       },
@@ -74,7 +75,7 @@ function updateUserByUsername(username, role){
 // ticketing functions
 function retrieveTicketsByStatus(status){
   const params = {
-      TableName: 'project1_tickets',
+      TableName: ticketsTable,
       FilterExpression: '#s = :value',
       ExpressionAttributeNames: {
           '#s': 'status'
@@ -88,7 +89,7 @@ function retrieveTicketsByStatus(status){
 }
 function retrieveTicketsByUser(username){
   const params = {
-      TableName: 'project1_tickets',
+      TableName: ticketsTable,
       FilterExpression: '#u = :value',
       ExpressionAttributeNames: {
           '#u': 'submitted_by'
@@ -101,7 +102,7 @@ function retrieveTicketsByUser(username){
 }
   function retrieveTicketsByUserAndType(username,type){
     const params = {
-        TableName: 'project1_tickets',
+        TableName: ticketsTable,
         FilterExpression: '#u = :value and #t = :t',
         ExpressionAttributeNames: {
             '#u': 'submitted_by',
@@ -117,7 +118,7 @@ function retrieveTicketsByUser(username){
 }
 function retrieveAllTickets(){
   const params = {
-      TableName: 'project1_tickets'
+      TableName: ticketsTable
   };
 
   return dynamoDocClient.scan(params).promise();
@@ -126,7 +127,7 @@ function retrieveAllTickets(){
 
 function createTicket( ID, amount, description, user, type = "default"){
   var params = {
-    TableName: 'project1_tickets',
+    TableName: ticketsTable,
     Item: {
       'ticket_id' : {S: ID},
       'amount' : {N: amount},
@@ -147,7 +148,7 @@ function createTicket( ID, amount, description, user, type = "default"){
 };
 function updateTicketByID(ticket_id, status, resolver){
   const params = {
-      TableName: 'project1_tickets',
+      TableName: ticketsTable,
       Key: {
           ticket_id
       },
@@ -167,7 +168,7 @@ function updateTicketByID(ticket_id, status, resolver){
 function isTicketPending(ticket_id){
   var params = {
       KeyConditionExpression: '#i = :i',
-      TableName: 'project1_tickets',
+      TableName: ticketsTable,
       ExpressionAttributeValues: { ":i": ticket_id},
       ExpressionAttributeNames: { "#i": 'ticket_id'},
   }
