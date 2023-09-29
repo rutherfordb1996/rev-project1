@@ -22,7 +22,7 @@ function patchTicketsLogic(req){
     if (req.body.payload.role === 'admin'){
       dao.isTicketPending(id)
       .then((data) => {
-        if(data.Items[0].status === 'pending'){
+        if(data.Items[0].status === 'pending' && data.Items[0].submitted_by !== req.body.payload.username){
           dao.updateTicketByID(id,stat,req.body.payload.username)
             .then((data) =>{
               resolve({"message":`ticket ${id} has been set to ${stat}`,"status":200});
@@ -32,7 +32,13 @@ function patchTicketsLogic(req){
             })
         }
         else{
-          resolve({"message":"cannot change a resolved ticket","status":403});
+          if(data.Items[0].submitted_by === req.body.payload.username){
+            resolve({"message":"cannot change your own ticket","status":403})
+          }
+          else{
+            resolve({"message":"cannot change a resolved ticket","status":403});
+          }
+          
         }
       })
       .catch((err) => {
@@ -273,7 +279,7 @@ function setRoleLogic(req){
         }
     }
     else{
-      reject({"message":"you must log in","status":402});
+      reject({"message":"you must log in","status":401});
     }
     
     
@@ -311,7 +317,7 @@ function loginLogic(req){
       "user": body.username})
     }
     else{
-      reject({"message":"Invalid credentials", "status":402});
+      reject({"message":"Invalid credentials", "status":400});
     }
   })
   .catch((err) => {
