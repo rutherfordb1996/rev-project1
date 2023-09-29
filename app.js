@@ -18,6 +18,7 @@ function patchTicketsLogic(req){
   const id = req.query.ticketID;
   const stat = req.body.status;
   let response = new Promise((resolve,reject) => {
+    if(req.body.payload){
     if (req.body.payload.role === 'admin'){
       dao.isTicketPending(id)
       .then((data) => {
@@ -41,7 +42,12 @@ function patchTicketsLogic(req){
     else{
       resolve({"message":"you do not have permission to do this","status":403});
     }
+  }
+  else{
+    resolve({"message":"you must log in","status":401})
+  }
   })
+  
   return(response);
 }
 function getTicketsLogic(req){
@@ -109,14 +115,19 @@ function postTicketsLogic(req){
           dao.createTicket(uuid.v4(),body.amount,body.description, body.payload.username);
         }
         
-        resolve({"message":"Ticket submitted!","status": 200});
+        resolve({"message":"Ticket submitted!","status": 201});
         }
       else{
         reject({"message":body.reason,"status":400})
       }
     }
     else{
-      reject({"message":"you must be logged in to post a ticket","status":401});
+      if(req.body.reason){
+        reject({"message":req.body.reason,"status":400})
+      }
+      else{
+        reject({"message":"you must be logged in to post a ticket","status":401});
+      }
     }
   })
   return response;
@@ -276,7 +287,7 @@ function createAccountLogic(req){
     isUsernameValid(body.username)
     .then((message) => {
       dao.registerNewUser(body.username,body.password);
-      resolve({"message":"Account created!", "status":200});
+      resolve({"message":"Account created for: "+body.username, "status":201});
     })
     .catch((message) => {
       reject({"message":message, "status":400});
@@ -342,7 +353,8 @@ server.post('/users/login', (req,res) => {
   .then((data) => {
     console.log(data);
     res.status(data.status);
-    res.send(data.message +"\n you are logged in as: "+ data.user +"\nHere is your auth token: "+ data.token);
+    jsondata = {"message":data.message +"\n you are logged in as: "+ data.user, "token": data.token}
+    res.send(jsondata);
   })
   .catch((err) =>{
     res.status(err.status);
